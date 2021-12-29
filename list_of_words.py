@@ -44,14 +44,12 @@ def encoding(words_list):
     logging.debug(f"Number of ancoding words: {len(words)}")
     return words
 
-def take_word_and_update_list(plik):
-    list_of_words = decoding(load_words(plik))
-    table_words = db.select_names_of_words('pl_words')
-    logging.debug(f"Number list_of_words: {len(list_of_words)} / table_words: {len(table_words)}")
-    word = random.choice(list_of_words)
-    list_of_words.remove(word)
-    logging.debug(f"Random word: {word}")
-    return word
+def random_word(file):
+    words = decoding(load_words(file))
+    return words
+
+def return_words(file, words):
+    save_word(file, encoding(words))
  
 
 """
