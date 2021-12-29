@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 import logging
+import random
 from connect_database import db, en, fr
-from list_of_words import take_word_and_update_list
+from list_of_words import random_word, return_words
 from PyQt5.QtGui import QTextDocument
 from PyQt5 import QtCore, QtGui, QtWidgets
-# logging.basicConfig(format='%(levelname)s - %(asctime)s: %(message)s',datefmt='%H:%M:%S', level=logging.DEBUG)
-logging.basicConfig(format='%(levelname)s - %(asctime)s: %(message)s',datefmt='%H:%M:%S', level=logging.INFO)
+logging.basicConfig(format='%(levelname)s - %(asctime)s: %(message)s',datefmt='%H:%M:%S', level=logging.DEBUG)
+# logging.basicConfig(format='%(levelname)s - %(asctime)s: %(message)s',datefmt='%H:%M:%S', level=logging.INFO)
 # logging.basicConfig(format='%(levelname)s - %(asctime)s: %(message)s',datefmt='%H:%M:%S', level=logging.WARNING)
 # logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(message)s', filename="logfile.log")
 
@@ -16,14 +17,21 @@ logging.warning("Dla przewidzianych błędów")
 class Ui_MainWindow(object):
     
     # Take 10 words from file
-    def prepare_words():
+    words_list = random_word('words_pl.txt')
+    def prepare_words(words):
         quest = {}
-        for word in range(10, 0, -1):
-            quest[word] = take_word_and_update_list('words_pl.txt')
-            logging.debug(f"{word} : {quest[word]}")
+        count = 10
+        while count != 0:
+            word = random.choice(words)
+            if word in quest.values():
+                continue
+            quest[count] = word
+            
+            logging.debug(f"{count} : {quest[count]}")
+            count -= 1
         return quest
     
-    quest = prepare_words()
+    quest = prepare_words(words_list)
     logging.info(quest)
 
     words = {}
@@ -270,12 +278,12 @@ class Ui_MainWindow(object):
         self.actionOpisz_10_s_w.setText(_translate("MainWindow", "Opisz 10 słów"))
         self.actionDodaj_w_asne_s_owo.setText(_translate("MainWindow", "Dodaj własne słowo"))
         self.actionZnajd_s_owo.setText(_translate("MainWindow", "Znajdź słowo"))
-
+        self.enable_button(self.rid_html(self.words_num.text()))
     
 
     # Button for franch accents
     def add_akcent(self, akcent):
-        # Dorobić śledzenie kursora, tak aby nie znikał przy naciśnięciu guzika
+        # Dorobić śledzenie kursora i tak aby nie znikał przy naciśnięciu guzika
         self.input_translate.setText(f'{self.input_translate.toPlainText()}{akcent}')
 
     # Write the data in the dictionary for this section
@@ -286,7 +294,7 @@ class Ui_MainWindow(object):
                             'assiociation': self.rid_html(self.input_assiociation.toPlainText()), 
                             'part of speech': self.rid_html(self.input_part_of_speech.currentText())
                             }
-        logging.debug(f'Save word: {word}')
+        logging.info(f'Save word: {word}')
 
     # Take only text from html code
     def rid_html(self, phrase):
@@ -304,25 +312,6 @@ class Ui_MainWindow(object):
         self.input_assiociation.setText('')
         self.input_part_of_speech.setCurrentIndex(0)
 
-    # Go to the next word
-    def next_word(self, word, count):
-        word = self.rid_html(word)
-        count = self.rid_html(count)
-        self.save_word(word)
-        logging.debug(f"Words : {self.words.keys()}")
-        if int(count) == 1:
-            logging.debug("All words are described")
-            logging.debug("Dorobić okienko z wiadomością")
-            return
-        self.clean_input_fields()
-        count = int(count) - 1
-        next_word = self.quest[int(count)]
-        self.fill_input_fields(next_word)
-        logging.debug(f"Next word : {next_word} | {count}")    
-        _translate = QtCore.QCoreApplication.translate
-        self.word.setText(_translate("MainWindow", f"<html><head/><body><p align=\"center\"><span style=\" font-size:11pt; font-weight:600;\">{next_word}</span></p></body></html>"))
-        self.words_num.setText(_translate("MainWindow", f"<html><head/><body><p align=\"center\"><span style=\" font-size:12pt; font-weight:600;\">{str(count)}</span></p></body></html>"))
-
     # Fill in the fields with the information from the dictionary
     def fill_input_fields(self, word):
         try:
@@ -337,34 +326,70 @@ class Ui_MainWindow(object):
             logging.debug(f'A word: {word}; does not exist yet')
             return
 
-    # Go to the previous word
-    def previous_word(self, word, count):
-        logging.debug('Zrów tak aby pola się automatycznie uzupełniały')
+    # Check which buttons are available
+    def enable_button(self, count):
+        if int(count) == 1:
+            logging.debug("All words are described")
+            self.but_next_word.setEnabled(False)
+        else:
+            self.but_next_word.setEnabled(True)
+        if int(count) == 10:
+            logging.debug(f"This is first word")
+            self.but_previous_word.setEnabled(False)
+        else:
+            self.but_previous_word.setEnabled(True)
+
+    # Go to the next word
+    def next_word(self, word, count):
         word = self.rid_html(word)
         count = self.rid_html(count)
         self.save_word(word)
-        logging.debug(f"Present_word : {word} | {count}")
+        self.clean_input_fields()
+        count = int(count) - 1
+        next_word = self.quest[int(count)]
+        self.fill_input_fields(next_word)
+        logging.debug(f"Present word : {next_word} | {count}")    
+        _translate = QtCore.QCoreApplication.translate
+        self.word.setText(_translate("MainWindow", f"<html><head/><body><p align=\"center\"><span style=\" font-size:11pt; font-weight:600;\">{next_word}</span></p></body></html>"))
+        self.words_num.setText(_translate("MainWindow", f"<html><head/><body><p align=\"center\"><span style=\" font-size:12pt; font-weight:600;\">{str(count)}</span></p></body></html>"))
+        self.enable_button(count)
 
-        if int(count) == 10:
-            logging.debug(f"This is first word")
-            logging.debug("Dorobić okienko z wiadomością")
-            return
+    # Go to the previous word
+    def previous_word(self, word, count):
+        word = self.rid_html(word)
+        count = self.rid_html(count)
+        self.save_word(word)
         count = int(count) + 1
         previous_word = self.quest[int(count)]
         self.fill_input_fields(previous_word)
-        logging.debug(f"Prvious_word : {previous_word} | {count}")
+        logging.debug(f"Present word : {previous_word} | {count}")
         _translate = QtCore.QCoreApplication.translate
         self.word.setText(_translate("MainWindow", f"<html><head/><body><p align=\"center\"><span style=\" font-size:11pt; font-weight:600;\">{previous_word}</span></p></body></html>"))
         self.words_num.setText(_translate("MainWindow", f"<html><head/><body><p align=\"center\"><span style=\" font-size:12pt; font-weight:600;\">{str(count)}</span></p></body></html>"))
-        
+        self.enable_button(count)
+
     # Insert data into database at the end
     def insert_data(self):
-        logging.debug("Inserting data")
+        added_word = []
+        logging.info("Inserting data")
+        for word, data in self.words.items():
+            if data['word_pl'] == '' or data['word_fr'] == '':
+                continue
+            
+            db.insert('pl_words', data['word_pl'], data['part of speech'])
+            id_word_pl = db.take_word_row('pl_words', data['word_pl'])[0]
+            logging.debug(f'Id word_pl: {id_word_pl}')
+            added_word.append[word]
+            fr.insert(data['word_fr'], id_word_pl, data['part of speech'], data['synonym'], data['assiociation'], 'brak')
+        logging.info(f'Data inserted. {len(added_word)} words')
+        if len(added_word) > 0:
+            self.words_list.remove(added_word)
+        return_words('words_pl.txt', self.words_list)
 
     # Exit with a button
     def exit_app(self, word):
         self.save_word(word)
-        logging.debug("Exit program")
+        logging.info("Exit window")
         logging.debug("Upewnij się że dane się zapisują :)")
         self.insert_data()
         exit()
@@ -378,4 +403,6 @@ if __name__ == "__main__":
     ui.setupUi(MainWindow)
     MainWindow.show()
     sys.exit(app.exec_())
+
+logging.info('Exit program')
 
